@@ -151,8 +151,10 @@ strip = "none"              # strip symbols and lineinfo from the executable its
 
 ### Installing SysInternals ProcDump (and friends)
 
-The best way to install and keep SysInternals update is to use the script [Install-SysInternasSuite.ps1](https://powershellisfun.com/2023/01/27/install-or-update-your-sysinternals-suite-using-powershell/).
-It allows for a smooth installation to a chosen directory, then it will remember it and only update the necessary tools that get updated since the last run.
+    winget install --silent "Sysinternals Suite" Microsoft.WindowsSDK.10.0.17736
+
+    # windows sdk version might have changed check to see what's available
+    winget search WindowsSDK
 
 ### Capturing Access Violation Events
 
@@ -160,11 +162,11 @@ ProcDump has two main being executed:
 1. starting an executable by name and its associated arguments
 2. attaching to a running process
 
-The first method is simple but has the disadvantage of using ProcDump's default minidump naming.  
-The second method allows one to specify some pre-defined strings that will be part of the minidump filename but requires that the target process already exists or is started after the ProcDump command executes.  
+The first method is simple but has the disadvantage of using ProcDump's default minidump naming.
+The second method allows one to specify some pre-defined strings that will be part of the minidump filename but requires that the target process already exists or is started after the ProcDump command executes.
 
-I prefer the second method, which allows my minidumps to have  the exception code that caused the exception event as part of its filename.  
-It is a nice way to find an interesting exception in the middle of sometimes thousands of minidump files recorded during an overnight testing marathon.  
+I prefer the second method, which allows my minidumps to have  the exception code that caused the exception event as part of its filename.
+It is a nice way to find an interesting exception in the middle of sometimes thousands of minidump files recorded during an overnight testing marathon.
 
 This is the command used to generate the minidump above:
 ```batch
@@ -194,15 +196,15 @@ for /L %i in (1,1,100) do  (
 )
 ```
 
-The reason I am running it multiple times is because the problem I am tracking down does not happen every time I run a single test.  
+The reason I am running it multiple times is because the problem I am tracking down does not happen every time I run a single test.
 It happens intermitently and only if I run all tests in my project.
 
 ### Analysing the Minidumps
 
-Once a minidump gets created, you can open it usinga Windows debugger and type ".excr" to set the skeleton process with its data.  
-Once that is done, you can then use regular like "~*kb" (show the stack with arguments for all threads in the process).  
-The active thread is the one that caused the exception event. The instruction pointer of this thread is the instruction that caused the event.  
-When you have symbols set correctly, these stacks will have their function names and the debugger will even show the source (if available) that caused the exception event recorded.  
+Once a minidump gets created, you can open it usinga Windows debugger and type ".excr" to set the skeleton process with its data.
+Once that is done, you can then use regular like "~*kb" (show the stack with arguments for all threads in the process).
+The active thread is the one that caused the exception event. The instruction pointer of this thread is the instruction that caused the event.
+When you have symbols set correctly, these stacks will have their function names and the debugger will even show the source (if available) that caused the exception event recorded.
 
 Notice that we run "rwindbg.bat -z path\to\file.dmp":
 ```batch
@@ -232,17 +234,17 @@ Details from the WinDBG window opened.
    Source search path is: srv*;r:\repo\myproject\messaging\core_messaging\examples\;r:\repo\myproject\messaging\core_messaging\src\;r:\repo\myproject\messaging\core_messaging\src\que\;r:\repo\myproject\messaging\core_messaging\src\tests\;R:\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib\rustlib\src\rust\library\alloc\benches\;R:\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib\rustlib\src\rust\library\alloc\benches\btree\;...
    ```
 
-4. The output of the "lm" (show modules) shows the the modules loaded and their load addresses.  
+4. The output of the "lm" (show modules) shows the the modules loaded and their load addresses.
 Notice that the executable has "(private pdb symbols)" after its name, indicating that the PDB for it was found and it has been loaded.
    ```text
    ========== lm - show the modules currently loaded to our process
    start             end                 module name
    00007ff6`60e60000 00007ff6`61208000   core_messaging_4b9cbd3c8bffceb0 C (private pdb symbols)  t:\system\temp\rwindbg\symbols\ms\core_messaging-4b9cbd3c8bffceb0.pdb\6FC820A0DE6C45A7B1B20FC03F5348F98\core_messaging-4b9cbd3c8bffceb0.pdb
-   00007ff8`002c0000 00007ff8`002d2000   kernel_appcore # (deferred)             
+   00007ff8`002c0000 00007ff8`002d2000   kernel_appcore # (deferred)
    ```
 
-5. You can ask WinDBG to load the minidump data into the skeleton process it created by using the ".excr" command.  
-Notice that the last line shows the instructions that caused the event and the line above, the "module_name!function_name" where it happened:  
+5. You can ask WinDBG to load the minidump data into the skeleton process it created by using the ".excr" command.
+Notice that the last line shows the instructions that caused the event and the line above, the "module_name!function_name" where it happened:
    ```text
    0:007> .excr
    rax=000001275a8e07c0 rbx=0000012759854740 rcx=0000012759854740
@@ -257,21 +259,21 @@ Notice that the last line shows the instructions that caused the event and the l
    00007ff6`6107c030 817960fecaadab  cmp     dword ptr [rcx+60h],0ABADCAFEh ds:00000127`598547a0=????????
    ```
 
-6. You can use the "~k" command to see the stack causing the event. The ".excr" command made it the current stack in the skeleton process.  
-WinDBG will open the source file for you on a window if you click on its path on the stack command.  
-If you click on the frame number (00, 01, 02 at the left of each stack entry line), the registers will be loaded with the values at the time that call was made, values which are saved on the stack.  
+6. You can use the "~k" command to see the stack causing the event. The ".excr" command made it the current stack in the skeleton process.
+WinDBG will open the source file for you on a window if you click on its path on the stack command.
+If you click on the frame number (00, 01, 02 at the left of each stack entry line), the registers will be loaded with the values at the time that call was made, values which are saved on the stack.
    ```text
    0:007> ~k
     # Child-SP          RetAddr               Call Site
-   00 00000009`bf8fe6b8 00007ff6`61077393     core_messaging_4b9cbd3c8bffceb0!zmq::ctx_t::check_tag [r:\.cargo\registry\src\artifactory.my-company.com-207c04f103d33362\zeromq-src-0.2.6+4.3.4\vendor\src\ctx.cpp @ 109] 
-   01 00000009`bf8fe6c0 00007ff6`60fbdaa0     core_messaging_4b9cbd3c8bffceb0!zmq_ctx_term+0x13 [r:\.cargo\registry\src\artifactory.my-company.com-207c04f103d33362\zeromq-src-0.2.6+4.3.4\vendor\src\zmq.cpp @ 152] 
-   02 (Inline Function) --------`--------     core_messaging_4b9cbd3c8bffceb0!zmq::RawContext::term+0x8 [r:\.cargo\registry\src\artifactory.my-company.com-207c04f103d33362\zmq-0.10.0\src\lib.rs @ 383] 
-   03 00000009`bf8fe6f0 00007ff6`60e8fe91     core_messaging_4b9cbd3c8bffceb0!zmq::impl$10::drop+0x10 [r:\.cargo\registry\src\artifactory.my-company.com-207c04f103d33362\zmq-0.10.0\src\lib.rs @ 0] 
-   04 (Inline Function) --------`--------     core_messaging_4b9cbd3c8bffceb0!core::ptr::drop_in_place+0x5 [/rustc/129f3b9964af4d4a709d1383930ade12dfe7c081\library\core\src\ptr\mod.rs @ 514] 
+   00 00000009`bf8fe6b8 00007ff6`61077393     core_messaging_4b9cbd3c8bffceb0!zmq::ctx_t::check_tag [r:\.cargo\registry\src\artifactory.my-company.com-207c04f103d33362\zeromq-src-0.2.6+4.3.4\vendor\src\ctx.cpp @ 109]
+   01 00000009`bf8fe6c0 00007ff6`60fbdaa0     core_messaging_4b9cbd3c8bffceb0!zmq_ctx_term+0x13 [r:\.cargo\registry\src\artifactory.my-company.com-207c04f103d33362\zeromq-src-0.2.6+4.3.4\vendor\src\zmq.cpp @ 152]
+   02 (Inline Function) --------`--------     core_messaging_4b9cbd3c8bffceb0!zmq::RawContext::term+0x8 [r:\.cargo\registry\src\artifactory.my-company.com-207c04f103d33362\zmq-0.10.0\src\lib.rs @ 383]
+   03 00000009`bf8fe6f0 00007ff6`60e8fe91     core_messaging_4b9cbd3c8bffceb0!zmq::impl$10::drop+0x10 [r:\.cargo\registry\src\artifactory.my-company.com-207c04f103d33362\zmq-0.10.0\src\lib.rs @ 0]
+   04 (Inline Function) --------`--------     core_messaging_4b9cbd3c8bffceb0!core::ptr::drop_in_place+0x5 [/rustc/129f3b9964af4d4a709d1383930ade12dfe7c081\library\core\src\ptr\mod.rs @ 514]
    ```
 
-7. If you have system APIs on the stack trace, you may want to force the load of those PDBs with the ".reload /f /i" command.  
-Notice that after this command executes, the kernel_appcore module now says "(pdb symbols)" where it used to show "(deferred)".  
+7. If you have system APIs on the stack trace, you may want to force the load of those PDBs with the ".reload /f /i" command.
+Notice that after this command executes, the kernel_appcore module now says "(pdb symbols)" where it used to show "(deferred)".
    ```text
    0:007> .reload /f /i
    .*** WARNING: Unable to verify checksum for core_messaging-4b9cbd3c8bffceb0.exe

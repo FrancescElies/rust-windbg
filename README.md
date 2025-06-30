@@ -1,4 +1,7 @@
 # rust-windbg
+> [!WARNING]
+> Probably nothing here for you; just trying to make it work for myself
+
 Document intricacies of using WinDBG to aid Rust project development
 
 ## What is WinDBG?
@@ -17,25 +20,25 @@ As your navigate the copious WinDBG information out there, make sure to focus on
 
 ### Non-install Option
 
-We developers sometimes worry that installing a software package will modify the environment.  
+We developers sometimes worry that installing a software package will modify the environment.
 I have verified in the past that WinDBG is not one of these. I have dumped a VM's registry before and after installing WinDBG and compared the resulting registry dumps. The only registry entry created is the location where it got installed such that the OS can uninstall it.
 
-That means you have the option of downloading WinDBG on one machine, copying its directory to a USB drive or making it available on a shared drive.  
-Once you mount this shared drive or connect the USB key on the target machine, all you need to do is run WinDBG from that location to get all its funcionality.  
+That means you have the option of downloading WinDBG on one machine, copying its directory to a USB drive or making it available on a shared drive.
+Once you mount this shared drive or connect the USB key on the target machine, all you need to do is run WinDBG from that location to get all its funcionality.
 If you desire, you can modify your environment PATH variable to make it easier on yourself by not requiring that the full pathname for the WinDBG executable be typed, but this is not required.
 
-The version we use in this project (latest available at this time) requires less that 90 MiB of disk space.  
+The version we use in this project (latest available at this time) requires less that 90 MiB of disk space.
 If you prefer this option, copy the contents of `"C:\Program Files (x86)\Windows Kits\10\Debuggers\x64"` to the USB drive or share this directory.
 
 ### Installing WinDBG
 
 - Download and install the `Windows SDK` which contains the classic `Debugging Tools for Windows` package from [Windows SDK archive](https://developer.microsoft.com/en-us/windows/downloads/sdk-archive/)
   - possible way: `dotnet add package Microsoft.Windows.SDK.BuildTools --version 10.0.22621.3233`
-  - make sure to check the installation of the `Debugging Tools for Windows` on the SDK installer settings (other components can also be checked, but that one **MUST** be checked)  
+  - make sure to check the installation of the `Debugging Tools for Windows` on the SDK installer settings (other components can also be checked, but that one **MUST** be checked)
 ![Check `Debugging Tools for Windows` on the SDK installer settings](./images/Windows_SDK_Installer_Debugging_Tools_for_Windows.png)
 - make sure the location of windbg.exe is added to the PATH environment variable (in this case `C:\Program Files (x86)\Windows Kits\10\Debuggers\x64`)
 
-Double check that windbg.exe is in your path before proceeding:  
+Double check that windbg.exe is in your path before proceeding:
 (create a new command window, then type this)
 ```bat
 r:\repo>where windbg
@@ -44,16 +47,16 @@ C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\windbg.exe
 
 ## First Debugging Session
 
-On this first debugging session, we will start notepad.exe and see what information we can gleam from it.  
-I know, we don't have the source for it, but we will use it to download the OS symbols for our machine and learn some WinDBG commands.  
-We will also set a default Workspace such that we can read the WinDBG UI from any monitor resolution.  
+On this first debugging session, we will start notepad.exe and see what information we can gleam from it.
+I know, we don't have the source for it, but we will use it to download the OS symbols for our machine and learn some WinDBG commands.
+We will also set a default Workspace such that we can read the WinDBG UI from any monitor resolution.
 
 - execute the `rwindbg.bat` script telling it to run `notepad.exe` passing the filename readme.md as argument
 
      <pre><code>r:\repo\rust-windbg><u>rwindbg.bat notepad.exe readme.md</u></code></pre>
 
-When we start a process by the WinDBG debugger, the OS loader will load all the require DLL dependencies, and execute a "int 3" instruction. This generates an expected exception of type 0x80000003. The OS function that does it is located in the `ntdll.dll` and has the function name `LdrpDoDebuggerBreak()`. WinDBG displays that as `ntdll!LdrpDoDebuggerBreak`.  
-This would be the address of this function. The "int 3" instruction happens a bit later, so WinDBG shows it with "+0x30" offset to indicate that the "int 3" instruction is located 0x30 bytes into the code 
+When we start a process by the WinDBG debugger, the OS loader will load all the require DLL dependencies, and execute a "int 3" instruction. This generates an expected exception of type 0x80000003. The OS function that does it is located in the `ntdll.dll` and has the function name `LdrpDoDebuggerBreak()`. WinDBG displays that as `ntdll!LdrpDoDebuggerBreak`.
+This would be the address of this function. The "int 3" instruction happens a bit later, so WinDBG shows it with "+0x30" offset to indicate that the "int 3" instruction is located 0x30 bytes into the code
 ```bat
 (67a8.67ac): Break instruction exception - code 80000003 (first chance)
 ntdll!LdrpDoDebuggerBreak+0x30:
@@ -61,7 +64,7 @@ ntdll!LdrpDoDebuggerBreak+0x30:
 ```
 
 
-First commands suggestion, which will make the UI more legible and remember these settings for later runs:  
+First commands suggestion, which will make the UI more legible and remember these settings for later runs:
 (when you see 'type "xyz"' that actually means to press the letters "x", "y" and "z" and then press the ENTER key to issue a WinDBG command)
 
   - maximize the WinDBG window
@@ -70,13 +73,13 @@ First commands suggestion, which will make the UI more legible and remember thes
   - select File => Save Workspace As, which will save the Default named workspace, click OK
   - type "k" to see the stack of the active thread
   - type "~" to see all the threads in our process; the one with a "." is the active thread
-  - type "u ." for WinDBG to emit the assembly code that we are currently executing  
-    ( the "." in WinDBG command represents the current instruction pointer)  
+  - type "u ." for WinDBG to emit the assembly code that we are currently executing
+    ( the "." in WinDBG command represents the current instruction pointer)
 
     <details>
     <summary>Dissassenbling functions in WinDBG</summary>
 
-    When entering Windbg commands, you can use "." to replace with the current value of the instruction pointer register (RIP).  
+    When entering Windbg commands, you can use "." to replace with the current value of the instruction pointer register (RIP).
     There are three commands that I use mostly when disassembling:
 
     command | Remarks
@@ -100,27 +103,27 @@ First commands suggestion, which will make the UI more legible and remember thes
     00007ff9`5170bedf cc              int     3
     ```
 
-    As you can see from the very first line, the execution is closed to the symbol named "ntdll!LdrpDoDebuggerBreak" and with an offset of "+0x30" bytes.  
+    As you can see from the very first line, the execution is closed to the symbol named "ntdll!LdrpDoDebuggerBreak" and with an offset of "+0x30" bytes.
     The CPU stopped execution at the "int 3" instruction. That is followed by a jump to the next instruction, then some fixing of the stack pointer RSP then a return "ret" followed by several more "int 3" opcodes.
-    We seem to be at the end of a function named LdrpDoDebuggerBreak().  
+    We seem to be at the end of a function named LdrpDoDebuggerBreak().
     </details>
     <details>
     <summary>Why is there an instruction to jump to the next instruction after the "int 3"?</summary>
-    It is insteresting to note that on the Intel Reference Manual the "int 3" instruction heading is "INT n/INTO/INT 3 — Call to Interrupt Procedure".  
-    When executed, this instruction generates a call to the interrupt handler or exception handler.  This handler can then signal a successful or an error return by the next instruction it executes.  
-    On error it returns to the next instruction, on success, it skip the jmp instruction and resume executing at the following instruction after the jump.  
+    It is insteresting to note that on the Intel Reference Manual the "int 3" instruction heading is "INT n/INTO/INT 3 — Call to Interrupt Procedure".
+    When executed, this instruction generates a call to the interrupt handler or exception handler.  This handler can then signal a successful or an error return by the next instruction it executes.
+    On error it returns to the next instruction, on success, it skip the jmp instruction and resume executing at the following instruction after the jump.
     That jump to the next instruction just directs the CPU to no matter if it returned in error or on success to continue execution of the program at the next instruction.
     </details>
 
     <details>
     <summary>Why are there several "int 3" opcodes after the "ret" instruction?</summary>
-    For performance reasons, functions are loaded on 16 byte aligned addresses. This way, when accessed, the first 16 bytes fill an entire cache line.  
-    As such, there will be some unused code space between the end of a function and the next usable address that normally is a dead zone.  
+    For performance reasons, functions are loaded on 16 byte aligned addresses. This way, when accessed, the first 16 bytes fill an entire cache line.
+    As such, there will be some unused code space between the end of a function and the next usable address that normally is a dead zone.
     The compilers normally fill these with "int 3" (opcode 0xcc) until the next 16 byte aligned address such that if you happen to end up there due to a programming error, it will end your process (if no debugger is attached) or be handled by the debugger.
     </details>
     <details>
     <summary>Why most system functions end with "add rsp,nn" followed by "ret"?</summary>
-    There are several approaches to passing arguments that can be used by the different compilers. For example, C++ code passes the "this" pointer in the RCX register. Some optimized code passes the first four argument in registers, the remainder on the stack.  
+    There are several approaches to passing arguments that can be used by the different compilers. For example, C++ code passes the "this" pointer in the RCX register. Some optimized code passes the first four argument in registers, the remainder on the stack.
     There is also possibility for the caller to cleanup the stack once the function returns, if any arguments were added to it. This is actually the only option when a function such as "printf()" is called, since only the caller know how many arguments were added to the stack.
     Others, might decided that the called function will cleanup the stack, since the argument count is known.
     This last choice in Windows is called "SYSCALL" and used by most Win32 APIs. This means the caller will push a known number of arguments onto the stack and the function will adjust the stack pointer accordingly prior to exit. Then the "ret" opcode moves the top of the stack (the return address) into the instruction pointer register and resume execution at that calling function.
@@ -177,7 +180,7 @@ First commands suggestion, which will make the UI more legible and remember thes
     00007ffb`2b2ebd4b c3              ret
     ```
 
-    If you are interested in knowing more about these instructions and have endless fun hours learning the intricacies of an architecture you can reach out to the [Intel 64 and IA-32 Architecture Software Developer Manual](https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-2a-manual.pdf).  
+    If you are interested in knowing more about these instructions and have endless fun hours learning the intricacies of an architecture you can reach out to the [Intel 64 and IA-32 Architecture Software Developer Manual](https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-2a-manual.pdf).
     Search for "INT n/INTO/INT 3—Call to Interrupt Procedure".
 
     </details>
@@ -188,7 +191,7 @@ You should see that notepad.exe still runs and can be interacted with.
 
 ## Intermission - Do I need a script to run WinDBG?
 
-Quick answer: No, you don't.  
+Quick answer: No, you don't.
 But you may already have your environment setup to use WinDBG for your non-Rust programs and I did not want to break/modify it.
 So `rwindbg.bat` only changes the environment temporarily for this invocation without affecting your permanent environment.
 
@@ -227,14 +230,14 @@ Comment this "goto ..." line and `rwindbg.bat` now prints it's environment setti
 _NT_SOURCE_PATH=.\src;.\;C:\Users\opedr\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib\rustlib\src\rust;C:\Users\opedr\.rustup\toolchains\nightly-x86_64-pc-windows-msvc\lib\rustlib\src\rust
 _NT_SYMBOL_PATH=cache*c:\Symbols\ms;srv*https://msdl.microsoft.com/download/symbols;srv*target\debug;srv*target\debug\deps;srv*target\debug\build;srv*target\release;srv*target\release\deps;srv*target\release\build;srv*C:\Users\opedr\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin;srv*C:\Users\opedr\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib\rustlib\x86_64-pc-windows-msvc\lib;srv*C:\Users\opedr\.rustup\toolchains\nightly-x86_64-pc-windows-msvc\bin;srv*C:\Users\opedr\.rustup\toolchains\nightly-x86_64-pc-windows-msvc\lib\rustlib\x86_64-pc-windows-msvc\lib
 start windbg -W Default -c "$&gt;&lt;C:\Users\opedr\AppData\Local\Temp\rwindbg.windbg" .\target\debug\stack_overflow.exe
-PS R:\repo\rust-windbg> 
+PS R:\repo\rust-windbg>
 </code></pre>
 </details>
 
 ## Second debugging session - re-attach to the running notepad.exe
 
-On this second session, we create a new WinDBG instance and attach it to the existing notepad.exe process we started and left running from the previous debugging session.  
-If you closed the notepad.exe instance (like I would have done), no worries. Just re-execute the command on the [First Debugging Session](#first-debugging-session) section again to get a running WinDBG session on newly created notepad.exe instance.  
+On this second session, we create a new WinDBG instance and attach it to the existing notepad.exe process we started and left running from the previous debugging session.
+If you closed the notepad.exe instance (like I would have done), no worries. Just re-execute the command on the [First Debugging Session](#first-debugging-session) section again to get a running WinDBG session on newly created notepad.exe instance.
 We then take a look around a process that is not ours (notepad.exe) to learn some common knowledge about processes in Windows.
 
 <details>
@@ -248,7 +251,7 @@ We then take a look around a process that is not ours (notepad.exe) to learn som
 <summary>Let's take a look at modules and their information</summary>
 
 - let's look at what the script controled WinDBG last printed, which is the list of all modules loaded in the process.
-    These are the dependent DLLs. If any of these is missing, the program cannot even be started.  
+    These are the dependent DLLs. If any of these is missing, the program cannot even be started.
     This is the output of the "lm" command. It shows each module start and end loading address, the module name, the symbol loading status ("deferred", "pdb symbols", "private pdb symbols") and the symbol filename (only if one is loaded):
 
     ```bat
@@ -360,7 +363,7 @@ We can also get more detail about which specific version of the KERNELBASE we ar
 
 ### The PEFILE (Portable Executable File)
 
-So glad you asked. In Windows, all executables and DLLs are packaged using the PEFILE format.  
+So glad you asked. In Windows, all executables and DLLs are packaged using the PEFILE format.
 The PEFILE (Portable Executable File) is a fundamental file format used by Windows operating systems for executable files (EXEs), dynamic link libraries (DLLs), and other types of files. It serves as a structured container that organizes code, data, and resources necessary for the execution and operation of programs. The PE format defines headers containing essential metadata like file type, machine architecture, entry point, and information about required libraries. It also divides the file into sections holding code, data, and resources such as icons, strings, and dialog boxes. PEFILE is critical for program loading, linking, and execution, allowing Windows to understand and manage the contents of executable files. Tools like dumpbin.exe, which is delivered with the SDK can be used to inspect it. Tools like editbin.exe from the SDK can be used to modify it.
 
 Most of the information displayed by the "lm" command in WinDBG comes from the PEFILE for that module.
@@ -408,10 +411,10 @@ r:\repo\rust-windbg>dumpbin /imports target\debug\stack_overflow.exe | findstr /
     api-ms-win-crt-heap-l1-1-0.dll
 ```
 
-Our executable can not start unless all these DLLs are found and mapped into our process memory.  
+Our executable can not start unless all these DLLs are found and mapped into our process memory.
 By the way, this process is recursive. These DLLs will also have their PEFILE headers inspected and their dependencies loaded prior to themselves being loaded into our process.
 
-On the command above, we only checked the filenames if printed out.  
+On the command above, we only checked the filenames if printed out.
 If you look at the actual printout, you will see that each DLL header is followed by the functions our program references from those DLLs. These have to be resolved and their addressed (after being mapped into our process) replaced in our process import table. That is how external functions referenced by our program are found during execution time.
 
 Let's take a look at a single one of them, the VCRUNTIME140.dll:
@@ -433,8 +436,8 @@ Let's take a look at a single one of them, the VCRUNTIME140.dll:
                            E __CxxFrameHandler3
 ```
 
-It is interesting that although this is a Rust program, it depends on the C/C++ Runtime library being loaded.  
-From the name of the referenced functions (*exception*) seems like Rust is borrowing C/C++ exception handling mechanics.  
+It is interesting that although this is a Rust program, it depends on the C/C++ Runtime library being loaded.
+From the name of the referenced functions (*exception*) seems like Rust is borrowing C/C++ exception handling mechanics.
 It also seems to borrow these efficient memory copy, compare, and set functions that can handle overlapping arrays as well.
 
 </details>
@@ -452,7 +455,7 @@ It also seems to borrow these efficient memory copy, compare, and set functions 
 ```
 - as you can see, the linker says we do use it, but that it is a import from some other module
 
-Since we don't know where, we will try to find it from all the modules that are loaded for our process.  
+Since we don't know where, we will try to find it from all the modules that are loaded for our process.
 At this point of the process created, they are all already loaded, so we should be able to find it.
 
 - enter the command "x *!CreateFileW<ENTER>", results which follows:
@@ -465,7 +468,7 @@ At this point of the process created, they are all already loaded, so we should 
 - notice that the first column is the address associated with each symbol
 - the name of an exported symbol follows the pattern "module!function_name"
 
-- issue the command "lma 00007ffd`2eb149f0" which is the address of the first CreateFileW returned by the "x" command above  
+- issue the command "lma 00007ffd`2eb149f0" which is the address of the first CreateFileW returned by the "x" command above
   - (you may have to enter the value your "x *!CreateFileW" printed out, since it might be different than mine)
 ```bat
 0:004> lma 00007ffd`2eb149f0
@@ -474,14 +477,14 @@ start             end                 module name
 00007ffd`2eaf0000 00007ffd`2ee97000   KERNELBASE   (pdb symbols)          c:\symbols\ms\kernelbase.pdb\639BADC1F9F2D7F0F8AC2DA91D5CF7B71\kernelbase.pdb
 ```
 
-Now that we know where the function actually is, we can set a breakpoint.  
+Now that we know where the function actually is, we can set a breakpoint.
 This can be done using the address or the name.
 ```bat
 0:000> bp KERNELBASE!CreateFileW
 0:000> bl
      0 e Disable Clear  00007fff`6e6149f0     0001 (0001)  0:**** KERNELBASE!CreateFileW
 ```
-Notice that the first number printed is a zero. This is actually a sequential id for the breakpoints you create.  
+Notice that the first number printed is a zero. This is actually a sequential id for the breakpoints you create.
 You can use them on commands affecting the breakpoint by specifying their id.
 The second, the letter 'e', indicates if the breakpoint is enabled or disabled.
 
@@ -504,21 +507,21 @@ In general all the links on the WinDBG UI are accelerator to commands like that
 
 ## Investigating a troubled Rust executable
 
-We now run a Rust executable from this project named `stack_overflow`.  
-This executable will ask for a positive integer on the terminal and calculate its factorial using a recursive algorithm.  
+We now run a Rust executable from this project named `stack_overflow`.
+This executable will ask for a positive integer on the terminal and calculate its factorial using a recursive algorithm.
 If given a large enough input like 100, it will fail with a stack overflow error (exception code 0xc00000fd)
 <details>
 <summary>Let's learn some more about stacks in Windows programs.</summary>
-- The PE Header 
-- By default, a Windows executable has a 1 MB stack region.  
-This default can be changed by linker directives (link /STACK:reserve[,commit]) or using development tools such as editbin (editbin /STACK:reserve[,commit]).  
-This default will be applied to all threads created unless the thread creation code itself specifies a different stack size.  
-Another way to affect the stack of a running process is to create a thread and specify the stack size during prior its creation.  
-As long as your code runs in that thread's context, you will be bound by that thread's attributes, including its stack size.  
+- The PE Header
+- By default, a Windows executable has a 1 MB stack region.
+This default can be changed by linker directives (link /STACK:reserve[,commit]) or using development tools such as editbin (editbin /STACK:reserve[,commit]).
+This default will be applied to all threads created unless the thread creation code itself specifies a different stack size.
+Another way to affect the stack of a running process is to create a thread and specify the stack size during prior its creation.
+As long as your code runs in that thread's context, you will be bound by that thread's attributes, including its stack size.
 
-I wanted this contrived example fail faster (not too many entries until it ran out of stack), so I am passing an array by value on the call to the factorial() function.  
-But Rust compiler is too smart and because I originally had no references into that array, it optimized it away and kept failing with still "too many" entries on the stack.  
-Only when I started accessing the array itself it finally failed as fast as desired since now the rust compiler had no choice but add the array manipulating steps to the generated code.  
+I wanted this contrived example fail faster (not too many entries until it ran out of stack), so I am passing an array by value on the call to the factorial() function.
+But Rust compiler is too smart and because I originally had no references into that array, it optimized it away and kept failing with still "too many" entries on the stack.
+Only when I started accessing the array itself it finally failed as fast as desired since now the rust compiler had no choice but add the array manipulating steps to the generated code.
 
 The final version we run this program with a stack of 4Kb, which is the minimum stack a Windows thread may have, since stacks are OS page size minimum.
 
@@ -526,7 +529,7 @@ Later on, we will also notice that stacks for multiple threads seem to coalesce 
 </details>
 </br>
 
-Running the `stack_overflow` executable informs us that it had a overflow on our thread.  
+Running the `stack_overflow` executable informs us that it had a overflow on our thread.
 (type the underlined characters)
 
 <pre><code>PS R:\repo\rust-windbg> <u>target\debug\stack_overflow.exe</u>
@@ -536,7 +539,7 @@ Enter a non-negative integer: 100
 thread 'thread1' has overflowed its stack
 </code></pre>
 
-We run it using `cargo run` to see if we gleam any other information:  
+We run it using `cargo run` to see if we gleam any other information:
 (type the underlined characters)
 
 <pre><code>PS R:\repo\rust-windbg> <u>cargo run --bin stack_overflow</u>
@@ -553,11 +556,11 @@ On this new run, we find out that the exit code is 0xC00000FD, which is the Wind
 <details>
 <summary>What are other Windows errors, exception codes and their associated messages?</summary>
 
-You can all see all other possible Windows errors and their associated message by inspecting this file delivered as part of the Windows SDK:  
+You can all see all other possible Windows errors and their associated message by inspecting this file delivered as part of the Windows SDK:
 
-[ntstatus.h](file:///C:/Program%20Files%20(x86)/Windows%20Kits/10/Include/10.0.22621.0/shared/ntstatus.h)  
+[ntstatus.h](file:///C:/Program%20Files%20(x86)/Windows%20Kits/10/Include/10.0.22621.0/shared/ntstatus.h)
 
-Another interesting file contains all possible results for the Win32 API GetLastError(), which is also part of the Windows SDK:  
+Another interesting file contains all possible results for the Win32 API GetLastError(), which is also part of the Windows SDK:
 
 [winerror.h](file:///C:/Program%20Files%20(x86)/Windows%20Kits/10/Include/10.0.22621.0/shared/winerror.h)
 
@@ -582,14 +585,14 @@ For now, we will make a record of that fact but decide to investigate it later.
 
 ## Debugging a Rust executable
 
-Let's run the DEBUG stack_overflow.exe under WinDBG and see what we can learn.  
+Let's run the DEBUG stack_overflow.exe under WinDBG and see what we can learn.
 (type the underlined characters; you only need the double-quotes if your executable has spaces in its name)
 <pre><code>r:\repo\rust-windbg> <u>rwindbg "target\debug\stack_overflow.exe"</u>
 </code></pre>
 
 You will see a printout of the command it executes and then two new windows are created:
 
-1) the script will printout the actual command it executes:  
+1) the script will printout the actual command it executes:
    ```bat
    start windbg -W Default -c "$><C:\Users\opedr\AppData\Local\Temp\rwindbg.windbg" target\debug\stack_overflow.exe
    ```
@@ -602,7 +605,7 @@ When this terminal window starts, it will get the keyboard focus (a started proc
 WinDBG commands are cryptic if one is not used to use them frequently. One command that is helpful is ".hh subject"
 We will next learn about threads, so lets call up the help on thread commands:
 <pre><code>0:000> <u>.hh thread</u></code></pre>
-That will open the Debugger help file on the article with title "Controlling Processes and Threads".  
+That will open the Debugger help file on the article with title "Controlling Processes and Threads".
 Sometimes the help dialog will open but the right article is not shown. In this case, press "<Enter>" on the help dialog that pops up to complete the help command.
 On this page we learn that we can use the character "|" to get the current process status and the character "~" to get the current thread status.
 Let's try them out
@@ -618,15 +621,15 @@ windbg> .hh thread
    3  Id: 722c.734 Suspend: 1 Teb: 0000004e`3b1c2000 Unfrozen
 ```
 
-On the data shown above, we see that process index 0 is the current process and that thread index 0 is the current thread.  
-The "." as the first character indicates which is the current.  
-We also learn that we can change the current process "|0s" or the current thread "~3s" by adding their index and "s" after it.  
+On the data shown above, we see that process index 0 is the current process and that thread index 0 is the current thread.
+The "." as the first character indicates which is the current.
+We also learn that we can change the current process "|0s" or the current thread "~3s" by adding their index and "s" after it.
 </br>
 </details>
 <details>
 <summary>Let's learn about threading commands in WinDBG "~*", "~#", "~s"</summary>
 Let try it again and this time we enter ".hh ~". Remember to press "<Enter>" on the help dialog that pops up to complete the help command.
-On this page title `Thread Syntax`, we learn that:  
+On this page title `Thread Syntax`, we learn that:
 
 | Thread Identifier | Description
 |-------|------------------------------------------------------------------------
@@ -636,7 +639,7 @@ On this page title `Thread Syntax`, we learn that:
 | ~s    | displays the current thread
 | ~Thread s    | sets the current thread (Thread is one of: index, #, or a numerical expression that resolves into a thread id)
 
-We can also ask for a command to be executed on a specific thread context, such as asking what was the last error that happened on that thread.  
+We can also ask for a command to be executed on a specific thread context, such as asking what was the last error that happened on that thread.
 That is, what was the last value someone called the Win32 API SetLastError() with, or what was the last status value of a kernel operation on this thread:
 
 ```bat
@@ -651,7 +654,7 @@ LastErrorValue: (Win32) 0 (0) - The operation completed successfully.
 LastStatusValue: (NTSTATUS) 0 - STATUS_SUCCESS
 ```
 
-We can also ask to see the stack for each thread to get an overall picture of what is happening in our process right now.  
+We can also ask to see the stack for each thread to get an overall picture of what is happening in our process right now.
 At this time, I don't expect anything very interesting since we are starting the process and not much has happened from the user program point of view.
 
 ```bat
@@ -690,12 +693,12 @@ At this time, I don't expect anything very interesting since we are starting the
 </details>
 <details>
 <summary>Let's learn how to use 'gn' to continue execution</summary>
-At this point we let the process execute and we should stop at our stack overflow event.  
+At this point we let the process execute and we should stop at our stack overflow event.
 <pre><code>0:000> <u>gn</u></code></pre>
 
-Note: I normally default to typing "gn" which official name is "Go with Exception Not Handled".  
-This command allows the application's exception handler to handle the exception.  
-Remember, you can always do ".hh gn" to read the details in the WinDBG Help.  
+Note: I normally default to typing "gn" which official name is "Go with Exception Not Handled".
+This command allows the application's exception handler to handle the exception.
+Remember, you can always do ".hh gn" to read the details in the WinDBG Help.
 
 Once "gn<ENTER>" is pressed, WindDBG shows that the debuggee is now running:
 ```bat
@@ -717,7 +720,7 @@ This exception may be expected and handled.
 stack_overflow!stack_overflow::factorial+0x7:
 00007ff7`1e218597 48894c2450      mov     qword ptr [rsp+50h],rcx ss:0000004e`3af86600=0000000000000000
 ```
-If our source setup is correct and our code build did produce a PDB containing the symbol file, WinDBG will open the associated source file and display the line number where the event happened:  
+If our source setup is correct and our code build did produce a PDB containing the symbol file, WinDBG will open the associated source file and display the line number where the event happened:
 (I marked the first line with '>>>' to indicate which line WinDBG highlighted on my screen)
 ```bat
 ...
@@ -736,7 +739,7 @@ If our source setup is correct and our code build did produce a PDB containing t
 <details>
 <summary>What have other threads been doing while we executed?</summary>
 
-I am curious to see what our other threads have been doing when this event took place that stop all threads.  
+I am curious to see what our other threads have been doing when this event took place that stop all threads.
 So I execute "~" to see all our current threads:
 ```bat
 0:004> ~
@@ -744,7 +747,7 @@ So I execute "~" to see all our current threads:
 .  4  Id: 722c.31fc Suspend: 1 Teb: 0000004e`3b1c4000 Unfrozen "thread1"
 ```
 
-Interesting, seems like our original threads indices 1, 2, and 3 have since terminated and are no longer threads in our process.  
+Interesting, seems like our original threads indices 1, 2, and 3 have since terminated and are no longer threads in our process.
 There is a new thread, index 4, which is the one that we create in our source with a smallish stack to force the stack overflow.
 
 I now execute a "~#" which tells me which thread caused the debug event that stopped the execution:
@@ -763,30 +766,30 @@ And finally we see what are the current stack traces for all threads:
  # Child-SP          RetAddr               Call Site
 00 0000004e`3af7f248 00007ffe`a95d427e     ntdll!NtWaitForSingleObject+0x14
 01 0000004e`3af7f250 00007ff7`1e225231     KERNELBASE!WaitForSingleObjectEx+0x8e
-02 0000004e`3af7f2f0 00007ff7`1e2118c5     stack_overflow!std::sys::pal::windows::thread::Thread::join+0x21 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6/library\std\src\sys\pal\windows\thread.rs @ 72] 
+02 0000004e`3af7f2f0 00007ff7`1e2118c5     stack_overflow!std::sys::pal::windows::thread::Thread::join+0x21 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6/library\std\src\sys\pal\windows\thread.rs @ 72]
 ...
 0c 0000004e`3af7f880 00007ff7`1e23349c     stack_overflow!main+0x19
-0d (Inline Function) --------`--------     stack_overflow!invoke_main+0x22 [D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl @ 78] 
-0e 0000004e`3af7f8b0 00007ffe`abf0257d     stack_overflow!__scrt_common_main_seh+0x10c [D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl @ 288] 
+0d (Inline Function) --------`--------     stack_overflow!invoke_main+0x22 [D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl @ 78]
+0e 0000004e`3af7f8b0 00007ffe`abf0257d     stack_overflow!__scrt_common_main_seh+0x10c [D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl @ 288]
 0f 0000004e`3af7f8f0 00007ffe`ac26aa48     KERNEL32!BaseThreadInitThunk+0x1d
 10 0000004e`3af7f920 00000000`00000000     ntdll!RtlUserThreadStart+0x28
 
 #  4  Id: 722c.31fc Suspend: 1 Teb: 0000004e`3b1c4000 Unfrozen "thread1"
  # Child-SP          RetAddr               Call Site
-00 0000004e`3af865b0 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x7 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 36] 
-01 0000004e`3af87210 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42] 
-02 0000004e`3af87e70 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42] 
-03 0000004e`3af88ad0 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42] 
-04 0000004e`3af89730 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42] 
-05 0000004e`3af8a390 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42] 
-06 0000004e`3af8aff0 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42] 
-07 0000004e`3af8bc50 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42] 
-08 0000004e`3af8c8b0 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42] 
-09 0000004e`3af8d510 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42] 
-0a 0000004e`3af8e170 00007ff7`1e215198     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42] 
-0b 0000004e`3af8edd0 00007ff7`1e21a279     stack_overflow!stack_overflow::main::closure$0+0xc8 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 28] 
+00 0000004e`3af865b0 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x7 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 36]
+01 0000004e`3af87210 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42]
+02 0000004e`3af87e70 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42]
+03 0000004e`3af88ad0 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42]
+04 0000004e`3af89730 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42]
+05 0000004e`3af8a390 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42]
+06 0000004e`3af8aff0 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42]
+07 0000004e`3af8bc50 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42]
+08 0000004e`3af8c8b0 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42]
+09 0000004e`3af8d510 00007ff7`1e2186a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42]
+0a 0000004e`3af8e170 00007ff7`1e215198     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42]
+0b 0000004e`3af8edd0 00007ff7`1e21a279     stack_overflow!stack_overflow::main::closure$0+0xc8 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 28]
 ...
-16 0000004e`3af8fe10 00007ffe`abf0257d     stack_overflow!std::sys::pal::windows::thread::impl$0::new::thread_start+0x4c [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6/library\std\src\sys\pal\windows\thread.rs @ 54] 
+16 0000004e`3af8fe10 00007ffe`abf0257d     stack_overflow!std::sys::pal::windows::thread::impl$0::new::thread_start+0x4c [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6/library\std\src\sys\pal\windows\thread.rs @ 54]
 17 0000004e`3af8fea0 00007ffe`ac26aa48     KERNEL32!BaseThreadInitThunk+0x1d
 18 0000004e`3af8fed0 00000000`00000000     ntdll!RtlUserThreadStart+0x28
 ```
@@ -798,18 +801,18 @@ So we can see that thread index 0 (the main thread) is waiting for the thread we
  # Child-SP          RetAddr               Call Site
 00 0000004e`3af7f248 00007ffe`a95d427e     ntdll!NtWaitForSingleObject+0x14
 01 0000004e`3af7f250 00007ff7`1e225231     KERNELBASE!WaitForSingleObjectEx+0x8e
-02 0000004e`3af7f2f0 00007ff7`1e2118c5     stack_overflow!std::sys::pal::windows::thread::Thread::join+0x21 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6/library\std\src\sys\pal\windows\thread.rs @ 72] 
+02 0000004e`3af7f2f0 00007ff7`1e2118c5     stack_overflow!std::sys::pal::windows::thread::Thread::join+0x21 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6/library\std\src\sys\pal\windows\thread.rs @ 72]
 ```
 </details>
 <details>
 <summary>Let's click on these stack entry source information and see what happens</summary>
 
-From this stack we can see that the last of rust source before it goes into the Windows Kernel is the call to [`fn Thread::join()`](https://doc.rust-lang.org/stable/std/thread/struct.JoinHandle.html#method.join).  
-Sometimes I would like to see what takes place in these functions that I call (or that I called on my behalf), but don't know the implementation.  
+From this stack we can see that the last of rust source before it goes into the Windows Kernel is the call to [`fn Thread::join()`](https://doc.rust-lang.org/stable/std/thread/struct.JoinHandle.html#method.join).
+Sometimes I would like to see what takes place in these functions that I call (or that I called on my behalf), but don't know the implementation.
 They just might give me some hints about their implementation that would help me understand why my code behaves as it does.
 
 Go ahead and click on the `02`, the very first two characters on this stack entry
-Or click on the original source path as shown after the function name on the same stack entry.  
+Or click on the original source path as shown after the function name on the same stack entry.
 WinDBG will work its magic and translate from the address contained on the stack to the source file and line number on your disk and open the source file for your enjoyment.
 
 Because the rwindbg script setup our source path and we did `rustup component add rust-src` during setup, you can click on the source path between the square brackets above and see what is the implementation of fn join():
@@ -881,7 +884,7 @@ TEB at 0000004e3b1c4000
 0:004> ? 000004e3af90000 - 0000004e3af81000
 Evaluate expression: 61440 = 00000000`0000f000
 ```
-So, from looking at the TEB, it tells me that my thread stack is actually 61440 bytes.  
+So, from looking at the TEB, it tells me that my thread stack is actually 61440 bytes.
 That is exactly 60 KiB. Remember that a stack is always [[committed stack][page guard] reserved stack].
 That would make our stack be 64 KiB total size. Even though in code we asked for a (8 * 1024) stack.
 ```rust
@@ -924,19 +927,19 @@ stack_overflow!stack_overflow::factorial:
 0:000> * what is our stack at this point?
 0:004> k
  # Child-SP          RetAddr               Call Site
-00 0000003c`1e7aedd8 00007ff6`25fa5198     stack_overflow!stack_overflow::factorial [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 36] 
-01 0000003c`1e7aede0 00007ff6`25faa279     stack_overflow!stack_overflow::main::closure$0+0xc8 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 28] 
-02 (Inline Function) --------`--------     stack_overflow!core::hint::black_box [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\core\src\hint.rs @ 337] 
-03 0000003c`1e7afb10 00007ff6`25fa27d9     stack_overflow!std::sys_common::backtrace::__rust_begin_short_backtrace<stack_overflow::main::closure_env$0,tuple$<> >+0x9 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\sys_common\backtrace.rs @ 158] 
-04 0000003c`1e7afb40 00007ff6`25fa4bc9     stack_overflow!std::thread::impl$0::spawn_unchecked_::closure$1::closure$0<stack_overflow::main::closure_env$0,tuple$<> >+0x9 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\thread\mod.rs @ 529] 
-05 0000003c`1e7afb70 00007ff6`25fa39bd     stack_overflow!core::panic::unwind_safe::impl$25::call_once<tuple$<>,std::thread::impl$0::spawn_unchecked_::closure$1::closure_env$0<stack_overflow::main::closure_env$0,tuple$<> > >+0x9 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\core\src\panic\unwind_safe.rs @ 273] 
-06 0000003c`1e7afba0 00007ff6`25fa3b33     stack_overflow!std::panicking::try::do_call<core::panic::unwind_safe::AssertUnwindSafe<std::thread::impl$0::spawn_unchecked_::closure$1::closure_env$0<stack_overflow::main::closure_env$0,tuple$<> > >,tuple$<> >+0x1d [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\panicking.rs @ 554] 
+00 0000003c`1e7aedd8 00007ff6`25fa5198     stack_overflow!stack_overflow::factorial [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 36]
+01 0000003c`1e7aede0 00007ff6`25faa279     stack_overflow!stack_overflow::main::closure$0+0xc8 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 28]
+02 (Inline Function) --------`--------     stack_overflow!core::hint::black_box [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\core\src\hint.rs @ 337]
+03 0000003c`1e7afb10 00007ff6`25fa27d9     stack_overflow!std::sys_common::backtrace::__rust_begin_short_backtrace<stack_overflow::main::closure_env$0,tuple$<> >+0x9 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\sys_common\backtrace.rs @ 158]
+04 0000003c`1e7afb40 00007ff6`25fa4bc9     stack_overflow!std::thread::impl$0::spawn_unchecked_::closure$1::closure$0<stack_overflow::main::closure_env$0,tuple$<> >+0x9 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\thread\mod.rs @ 529]
+05 0000003c`1e7afb70 00007ff6`25fa39bd     stack_overflow!core::panic::unwind_safe::impl$25::call_once<tuple$<>,std::thread::impl$0::spawn_unchecked_::closure$1::closure_env$0<stack_overflow::main::closure_env$0,tuple$<> > >+0x9 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\core\src\panic\unwind_safe.rs @ 273]
+06 0000003c`1e7afba0 00007ff6`25fa3b33     stack_overflow!std::panicking::try::do_call<core::panic::unwind_safe::AssertUnwindSafe<std::thread::impl$0::spawn_unchecked_::closure$1::closure_env$0<stack_overflow::main::closure_env$0,tuple$<> > >,tuple$<> >+0x1d [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\panicking.rs @ 554]
 07 0000003c`1e7afbf0 00007ff6`25fa3926     stack_overflow!std::panicking::try::do_catch<core::panic::unwind_safe::AssertUnwindSafe<std::thread::impl$7::drop::closure_env$0<tuple$<> > >,tuple$<> >+0xc3
-08 0000003c`1e7afc40 00007ff6`25fa265a     stack_overflow!std::panicking::try<tuple$<>,core::panic::unwind_safe::AssertUnwindSafe<std::thread::impl$0::spawn_unchecked_::closure$1::closure_env$0<stack_overflow::main::closure_env$0,tuple$<> > > >+0x26 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\panicking.rs @ 516] 
-09 (Inline Function) --------`--------     stack_overflow!std::panic::catch_unwind+0x5 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\panic.rs @ 146] 
-0a 0000003c`1e7afcb0 00007ff6`25fa61ae     stack_overflow!std::thread::impl$0::spawn_unchecked_::closure$1<stack_overflow::main::closure_env$0,tuple$<> >+0xfa [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\thread\mod.rs @ 527] 
-0b 0000003c`1e7afde0 00007ff6`25fb509c     stack_overflow!core::ops::function::FnOnce::call_once<std::thread::impl$0::spawn_unchecked_::closure_env$1<stack_overflow::main::closure_env$0,tuple$<> >,tuple$<> >+0xe [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\core\src\ops\function.rs @ 250] 
-0c 0000003c`1e7afe20 00007ff8`7146257d     stack_overflow!std::sys::pal::windows::thread::impl$0::new::thread_start+0x4c [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6/library\std\src\sys\pal\windows\thread.rs @ 54] 
+08 0000003c`1e7afc40 00007ff6`25fa265a     stack_overflow!std::panicking::try<tuple$<>,core::panic::unwind_safe::AssertUnwindSafe<std::thread::impl$0::spawn_unchecked_::closure$1::closure_env$0<stack_overflow::main::closure_env$0,tuple$<> > > >+0x26 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\panicking.rs @ 516]
+09 (Inline Function) --------`--------     stack_overflow!std::panic::catch_unwind+0x5 [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\panic.rs @ 146]
+0a 0000003c`1e7afcb0 00007ff6`25fa61ae     stack_overflow!std::thread::impl$0::spawn_unchecked_::closure$1<stack_overflow::main::closure_env$0,tuple$<> >+0xfa [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\std\src\thread\mod.rs @ 527]
+0b 0000003c`1e7afde0 00007ff6`25fb509c     stack_overflow!core::ops::function::FnOnce::call_once<std::thread::impl$0::spawn_unchecked_::closure_env$1<stack_overflow::main::closure_env$0,tuple$<> >,tuple$<> >+0xe [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6\library\core\src\ops\function.rs @ 250]
+0c 0000003c`1e7afe20 00007ff8`7146257d     stack_overflow!std::sys::pal::windows::thread::impl$0::new::thread_start+0x4c [/rustc/9b00956e56009bab2aa15d7bff10916599e3d6d6/library\std\src\sys\pal\windows\thread.rs @ 54]
 0d 0000003c`1e7afeb0 00007ff8`726aaa48     KERNEL32!BaseThreadInitThunk+0x1d
 0e 0000003c`1e7afee0 00000000`00000000     ntdll!RtlUserThreadStart+0x28
 
@@ -1034,7 +1037,7 @@ Dump of file target\debug\stack_overflow.exe
 ```
 This means our thread index 0 must actually have a 1 MiB thread stack size, of which only 0x1000 bytes (16 KiB) are committed on startup.
 
-So it seems that the TEB only reflects the committed stack in its data.  
+So it seems that the TEB only reflects the committed stack in its data.
 I am starting to believe that, once the guard page exception gets thrown:
 
 - the kernel checks that the total reserved amount for the stack has not been reached
@@ -1043,15 +1046,15 @@ I am starting to believe that, once the guard page exception gets thrown:
 - updates the TEB
 - and finally resumes this thread's execution by marking it ready so the scheduler will pick it up next time a CPU is available
 
-Checking the WinDBG help file with ".hh stack" takes us to the article titled "Debugging a Stack Overflow".  
+Checking the WinDBG help file with ".hh stack" takes us to the article titled "Debugging a Stack Overflow".
 According to this article there are three reasons a user-thread can encounter a stack overflow condition:
 
 - A thread uses the entire stack reserved for it. This is often caused by infinite recursion.
-- A thread cannot extend the stack because the page file is maxed out, and therefore no additional pages can be committed to extend the stack. 
-- A thread cannot extend the stack because the system is within the brief period used to extend the page file. 
+- A thread cannot extend the stack because the page file is maxed out, and therefore no additional pages can be committed to extend the stack.
+- A thread cannot extend the stack because the system is within the brief period used to extend the page file.
 
-The article also hints that the stack overflow is found when executing a function named `_chkstk()`. This function is supplied as part of the C/C++ Runtime.  
-The C++ compiler emits code that calls it_chkstk() at the top of every function it generates. It access the highest stack address known on entry, e.g. accessing the last defined local variable.  
+The article also hints that the stack overflow is found when executing a function named `_chkstk()`. This function is supplied as part of the C/C++ Runtime.
+The C++ compiler emits code that calls it_chkstk() at the top of every function it generates. It access the highest stack address known on entry, e.g. accessing the last defined local variable.
 This will succeed or generate a page guard exception, which will force the stack to be extended prior to the function executing any of its code that depends on those local variables being there.
 
 This article also has some techniques using WinDBG commands and offsets into the TEB data structure to calculate the actual stack extent, but the examples shown are for 32 bit OS and I am sure my 64 bit OS has different offsets.
@@ -1059,7 +1062,7 @@ I prefer to write a function in Rust that can inquire the OS what is are the act
 </details>
 <details>
 <summary>Let's print the actual stack size by asking the OS what they are</summary>
-I generated a stack_overflow_v2 program with a print_stack().  
+I generated a stack_overflow_v2 program with a print_stack().
 It now prints the stack extents for both the main thread and the thread created with a smaller stack:
 
 ```bat
@@ -1094,10 +1097,10 @@ thread 'thread1' has overflowed its stack
 error: process didn't exit successfully: `target\debug\stack_overflow_v2.exe` (exit code: 0xc00000fd, STATUS_STACK_OVERFLOW)
 ```
 
-Interesting that the results still differ slightly between --release and dev targets.  
-At least the stacks extents are the same for both cases.  
-It is also interesting to notice that the stacks are located next to each other.  
-For both targets, the stack for thread1 starts where the stack for the main thread ends.  
+Interesting that the results still differ slightly between --release and dev targets.
+At least the stacks extents are the same for both cases.
+It is also interesting to notice that the stacks are located next to each other.
+For both targets, the stack for thread1 starts where the stack for the main thread ends.
 They are contiguous in memory. We should not rely on this information but it is interesting to know that this takes place.
 </details>
 <details>
@@ -1116,7 +1119,7 @@ Notice first two characters on each stack entry. That is the frame index. Let's 
 ```bat
 0:004> * make frame 01 the current frame; we will be able to see the local variables at that point in time
 0:004> .frame 1
-01 00000014`63127180 00007ff6`25fa86a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42] 
+01 00000014`63127180 00007ff6`25fa86a5     stack_overflow!stack_overflow::factorial+0x115 [R:\repo\rust-windbg\bug_samples\stack_overflow.rs @ 42]
 
 
 0:004> * what are out local variables? instead of the 'dv' command you can also use the 'Local Variables' icon on the toolbar (hover over to see their names)
@@ -1175,7 +1178,7 @@ Notice first two characters on each stack entry. That is the frame index. Let's 
 ## Release gives a different error
 
 Let's take a look at why the RELEASE target gives a different error.
-I execute the latest version of the program in release and see that it still behave a bit differently:  
+I execute the latest version of the program in release and see that it still behave a bit differently:
 ```bat
 r:\repo\rust-windbg>cargo run --release --bin stack_overflow_v2
     Finished `release` profile [optimized] target(s) in 0.01s
@@ -1192,29 +1195,29 @@ Enter a non-negative integer: 100
 The factorial of 100 is: 0
 ```
 
-I then proceed to run it under the debugger using the script:  
+I then proceed to run it under the debugger using the script:
 ```bat
 r:\repo\rust-windbg>rwindbg target\release\stack_overflow_v2.exe
 start windbg -W Default -c "$><C:\Users\opedr\AppData\Local\Temp\rwindbg.windbg" target\release\stack_overflow_v2.exe
 ```
 
-In the debugger, I click File => Open Source File ... => navigate to bug_samples => change the "Files of type" field to "All Files" to see the rust sources => select stack_overflow_v2.rs => click Open.  
-Next I go to the "fn factorial" by clicking "CTRL+f" and typing "fn factorial" on the "Find what" field plus "ENTER" to execute the search.  
-Once found, if you look at the bottom right of the WinDBG window, you will see "ln: 43" indicating where the "fn factorial" is located.  
-With my cursor on that line, I click on F9, which will set a breakpoint, but I get a dialog that says:  
+In the debugger, I click File => Open Source File ... => navigate to bug_samples => change the "Files of type" field to "All Files" to see the rust sources => select stack_overflow_v2.rs => click Open.
+Next I go to the "fn factorial" by clicking "CTRL+f" and typing "fn factorial" on the "Find what" field plus "ENTER" to execute the search.
+Once found, if you look at the bottom right of the WinDBG window, you will see "ln: 43" indicating where the "fn factorial" is located.
+With my cursor on that line, I click on F9, which will set a breakpoint, but I get a dialog that says:
 ( that is literally what you get if you click "CTRL+SHIFT+c" with that dialog in focus )
 ```bat
 ---------------------------
-WinDbg:10.0.22621.2428 AMD64 
+WinDbg:10.0.22621.2428 AMD64
 ---------------------------
 Code not found, breakpoint not set
 ---------------------------
-OK   
+OK
 ---------------------------
 ```
 
-Most likely the reason is that the RELEASE mode optimizations inlined my function so the debugger cannot get a good handle where the function begins now.  
-I would like to set a breakpoint on that function, so I change my `Cargo.toml` file to have this entry:  
+Most likely the reason is that the RELEASE mode optimizations inlined my function so the debugger cannot get a good handle where the function begins now.
+I would like to set a breakpoint on that function, so I change my `Cargo.toml` file to have this entry:
 
 ```toml
 [profile.release]
@@ -1230,8 +1233,8 @@ Once I rebuild the release target and rerun with WinDBG, I now have a result for
 00007ff6`05ba1eac stack_overflow_v2!stack_overflow_v2::factorial =  (inline caller) stack_overflow_v2!std::sys_common::backtrace::__rust_begin_short_backtrace<stack_overflow_v2::main::closure_env$0,tuple$<> >+eac
 ```
 
-The "(inline caller)" tells me that the Rust compiler inlined my factorial function.  
-That might be good for performance but not very helpful for debugging.  
+The "(inline caller)" tells me that the Rust compiler inlined my factorial function.
+That might be good for performance but not very helpful for debugging.
 So I go back to the source and add a hint to no longer inline this function.
 
 ```rust,ignore
@@ -1239,7 +1242,7 @@ So I go back to the source and add a hint to no longer inline this function.
 fn factorial(arg: FactorialArgument) -> u64 {
 ```
 
-After I rebuild and rerun it with WinDBG I now get this result, which indicates my function is not longer inlined:  
+After I rebuild and rerun it with WinDBG I now get this result, which indicates my function is not longer inlined:
 
 ```bat
 0:000> x stack*!*factorial*
@@ -1257,17 +1260,17 @@ Executing "bl" also shows that we now have a breakpoint there:
 <details>
 <summary>How does a debugger implement breakpoints or single instruction stepping?</summary>
 
-Well there are some possibilities. The CPU normally has what is a called a hardware debug register, where an address can be loaded and when the instruction pointer has the same value of this register, it generates an interrupt which the debugger process handles and realizes that a location was reached. On the Intel architecture there are four of these registers.  
-But I can set many more than 4 breakpoints and the code still stops there.  
+Well there are some possibilities. The CPU normally has what is a called a hardware debug register, where an address can be loaded and when the instruction pointer has the same value of this register, it generates an interrupt which the debugger process handles and realizes that a location was reached. On the Intel architecture there are four of these registers.
+But I can set many more than 4 breakpoints and the code still stops there.
 
-What a debugger does is to replace the first byte of the instruction at the breakpoint location given with the one byte opcode "int 3" and it remembers the overwritten byte.  
-Once the code resumes running, it will stop when the "int 3" instruction gets executed, the debugger handler once again replaces the "int 3" it had inserted with the original byte code and return to the user prompt in the debugger UI.  
+What a debugger does is to replace the first byte of the instruction at the breakpoint location given with the one byte opcode "int 3" and it remembers the overwritten byte.
+Once the code resumes running, it will stop when the "int 3" instruction gets executed, the debugger handler once again replaces the "int 3" it had inserted with the original byte code and return to the user prompt in the debugger UI.
 If the user selects "g" to continue execution, the debugger will replace the next instruction first byte with an "int 3", resume execution (which will only execute a single instruction) and when when handling the next instruction's "int 3", re-replace at the breakpoint location the "int 3" (after the instruction was executed, therefore re-enabling that breakpoint), replace the current instruction on the current instruction with the original byte that was there and then resume execution once again. This time the program will resume and run until another debugger event happens.
 
 As you can see this is also how the debugger can implement single step instruction execution as well, by replacing (and remembering) the first byte of the next opcode with "int 3" and resuming execution of the program. Rinse and repeat and you get single instruction stepping.
 </details></br>
 
-From our previous runs, I now that the stack overflow happens on the 8th call to factorial, so I modify the breakpoint to conditionally stop only on the 8th pass:  
+From our previous runs, I now that the stack overflow happens on the 8th call to factorial, so I modify the breakpoint to conditionally stop only on the 8th pass:
 
 ```bat
 0:000> bp0 stack_overflow_v2!stack_overflow_v2::factorial 8 "dv"
@@ -1276,9 +1279,9 @@ breakpoint 0 exists, redefining
      0 e Disable Clear  00007ff7`d66d3510     0008 (0008)  0:**** stack_overflow_v2!stack_overflow_v2::factorial "dv"
 ```
 
-I proceed with the execution, but get a surprise result.  
-The function once again completes without reaching the 8th breakpoint.  
-The "bl" command shows that it the count reached 7 before the program ended.  
+I proceed with the execution, but get a surprise result.
+The function once again completes without reaching the 8th breakpoint.
+The "bl" command shows that it the count reached 7 before the program ended.
 
 ```bat
 0:000> gn
@@ -1293,7 +1296,7 @@ ntdll!NtTerminateProcess+0x14:
 02 000000f9`178ffca0 00007ffe`923bbed8     KERNEL32!ExitProcessImplementation+0xb
 03 000000f9`178ffcd0 00007ffe`923bc099     ucrtbase!exit_or_terminate_process+0x50
 04 000000f9`178ffd00 00007ff7`d66eb773     ucrtbase!common_exit+0x79
-05 000000f9`178ffd60 00007ffe`9373257d     stack_overflow_v2!__scrt_common_main_seh+0x173 [D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl @ 295] 
+05 000000f9`178ffd60 00007ffe`9373257d     stack_overflow_v2!__scrt_common_main_seh+0x173 [D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl @ 295]
 06 000000f9`178ffda0 00007ffe`948aaa48     KERNEL32!BaseThreadInitThunk+0x1d
 07 000000f9`178ffdd0 00000000`00000000     ntdll!RtlUserThreadStart+0x28
 0:000> bl
@@ -1301,7 +1304,7 @@ ntdll!NtTerminateProcess+0x14:
 ```
 
 The program ends. I check my breakpoint and its counter tells me that it passed the breakpoint 7 times and that it will stop on the 8th, but it never reached it.
-I then proceed to restart the process and reduce the count to 7 for the next run:  
+I then proceed to restart the process and reduce the count to 7 for the next run:
 
 ```bat
 0:000> .restart
@@ -1318,7 +1321,7 @@ I actually repeated this process multiple times, always with the same result, th
 By modifying the input number entered, I realized that in Release mode, the compiler worked around my recursive code problem and the stack overflow no longer happens.
 What seems to happen now is a numeric overflow. My reasoning comes to this because the program will emit correct factorial values up to 65 as input, but it will return 0 for input 66 and above.
 
-Learned that Rust does not perform overflow checking on Release targets by default due to performance reasons. But that we can enable that by changing our `Cargo.toml` file like this:  
+Learned that Rust does not perform overflow checking on Release targets by default due to performance reasons. But that we can enable that by changing our `Cargo.toml` file like this:
 
 ```toml
 [profile.release]
@@ -1340,7 +1343,7 @@ Windows | MSVC | .pdb | Program database file, a proprietary format for storing 
 <details>
 <summary>How to generate the most efficient working set for your code in Windows</summary>
 
-War Story:  
+War Story:
 An interesting side-effect of enabling LTO is that each function will be compiled to its own file and accompanying metadata. This allows, on the Windows platform, for one to use the `LINK /ORDER:@filename` to control the order that symbols are resolved during linking. This provides a subtle way to define the order functions will be loaded into the final executable. Combined with a trace of a scenario run, preferably with counts for how many times each function was called. This trace file will naturally be created with the traces in the order function are called. One can then divide the trace file in two parts, sort the entries in the first half by count in ascending order and the second half in descending order to have a final order file that provides the most optimal working set for an executable. All the high usage functions are close by other high usage functions in the center of the executable and therefore stay in the working set. Initialization functions are loaded first, used and then the OS working set trimming algorithm removes them from memory. Having a highly used neighboor function no longer forces a function that gets used once during startup to stay in memory because of its popular neighboor. This technique made a famous CAD program (millions of copy sold!) once be able to run on laptops where it was not possible before because of page trashing taking place during execution. I named this sort a Bell Curve Sort, since it provided a bell shapped curve result based on the function count traces.
 
 </details>
@@ -1367,8 +1370,8 @@ Explanation of Cargo.toml Tokens:
 
 ## Final Thoughts
 
-Hopefully you get help from WinDBG to find details about why your Rust program behaves the way it does when running in Windows.  
+Hopefully you get help from WinDBG to find details about why your Rust program behaves the way it does when running in Windows.
 The truth is even though the Rust language has the dream that everything is under control and nothing bad outside of your programs control will happen if you just write safe code, reality keeps rearing its ugly head and reminding you that as professional software developers we have to have to handle all situations, expected and unexpected, to the best of our abilities and hopefully, for the benefit of our code users.
 
-If you have ideas or situations that you think would help you better understand your program's behavior using WinDBG, by all means drop me a line or add an Issue to this GitHub project.  
+If you have ideas or situations that you think would help you better understand your program's behavior using WinDBG, by all means drop me a line or add an Issue to this GitHub project.
 I will check from time to time the Issues list and see if I can extend the contents to cover your issue as well. PRs are also welcome.
